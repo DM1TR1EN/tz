@@ -22,10 +22,10 @@ logging.basicConfig(
 REGION = (0, 120, 1650, 675)
 
 # Папка с шаблонами (позами) игрока
-BASE_FOLDER = r"C:\Users\dmitr\tz\templates\player"
+BASE_FOLDER = r"templates\player"
 
 # Папка с шаблонами (разные варианты) крыс
-RAT_TEMPLATES_FOLDER = r"C:\Users\dmitr\tz\templates\enemies\rat"
+RAT_TEMPLATES_FOLDER = r"templates\enemies\rat"
 
 # Словарь поз игрока → (x_shift, y_shift) для определения «центра» персонажа
 # POSE_OFFSETS = {
@@ -46,10 +46,10 @@ POSE_OFFSETS = {
 }
 
 # Пути к шаблонам иконок (выход из боя, в бою, ход противника, статистика боя)
-EXIT_ICON =        r"C:\Users\dmitr\tz\templates\other\exit_fight_icon.bmp"
-IN_BATTLE_ICON =   r"C:\Users\dmitr\tz\templates\other\in_battle_icon.bmp"
-ENEMY_TURN_ICON =  r"C:\Users\dmitr\tz\templates\other\enemy_turn.bmp"
-STATS_POPUP_ICON = r"C:\Users\dmitr\tz\templates\other\stats_popup_icon.bmp"
+EXIT_ICON =        r"templates\other\exit_fight_icon.bmp"
+IN_BATTLE_ICON =   r"templates\other\in_battle_icon.bmp"
+ENEMY_TURN_ICON =  r"templates\other\enemy_turn.bmp"
+STATS_POPUP_ICON = r"templates\other\stats_popup_icon.bmp"
 
 # Количество ударов по противнику
 N_HITS = 2
@@ -72,13 +72,13 @@ FIRST_TURN = True
 ###############################################################################
 
 # Папка с шаблонами цифр, где лежат файлы "0.png", "1.png", ..., "9.png"
-DIGITS_FOLDER = r"C:\Users\dmitr\tz\templates\digits"
+DIGITS_FOLDER = r"templates\digits"
 
 # Глобальная константа (словарь). Заполняется один раз в init_digit_templates().
 DIGIT_TEMPLATES = {}
 
 # Путь к референсному изображению, по которому ищем "блок", рядом с которым есть число
-REFERENCE_TEMPLATE_PATH = r"C:\Users\dmitr\tz\templates\other\ref_for_recognize.bmp"
+REFERENCE_TEMPLATE_PATH = r"templates\other\ref_for_recognize.bmp"
 
 # Смещение относительно верхнего левого угла найденного референса
 SHIFT_X = 46
