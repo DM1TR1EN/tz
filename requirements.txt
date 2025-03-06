@@ -1,0 +1,4 @@
+opencv-python==4.11.0
+numpy
+keyboard
+pyautogui==0.9.54
