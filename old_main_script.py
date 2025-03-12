@@ -1,7 +1,8 @@
+"""Версяи скрипта с нажатием через pyautogui"""
+
 import os
 import cv2
 import pyautogui
-import pydirectinput
 import time
 import math
 import random
@@ -634,13 +635,13 @@ def shift_click(x, y, button='left'):
     """
     Зажимает SHIFT, кликает мышью по (x, y), затем отпускает SHIFT.
     """
-    pydirectinput.keyDown(KEY_SHIFT)
+    pyautogui.keyDown(KEY_SHIFT)
     time.sleep(0.1)
 
-    pydirectinput.moveTo(x, y)
-    pydirectinput.click(button=button)
+    pyautogui.moveTo(x, y)
+    pyautogui.click(button=button)
 
-    pydirectinput.keyUp(KEY_SHIFT)
+    pyautogui.keyUp(KEY_SHIFT)
     time.sleep(0.1)
 
 
@@ -649,9 +650,9 @@ def cancel_popups():
     Смахивает всплывающие окна (ящики ресурсов, выход из боя и т.п.)
     клавишами BACKSPACE и ESC.
     """
-    pydirectinput.press(KEY_BACKSPACE)
+    pyautogui.press(KEY_BACKSPACE)
     time.sleep(0.1)
-    pydirectinput.press(KEY_ESC)
+    pyautogui.press(KEY_ESC)
     time.sleep(0.1)
 
 
@@ -661,9 +662,9 @@ def focus_game_window():
     затем возвращаем курсор на старое место.
     """
     # x, y = pyautogui.position()
-    pydirectinput.moveTo(70, 70)
-    pydirectinput.click()
-    # pydirectinput.moveTo(x, y)
+    pyautogui.moveTo(70, 70)
+    pyautogui.click()
+    # pyautogui.moveTo(x, y)
 
 
 def start_battle():
@@ -671,9 +672,9 @@ def start_battle():
     Имитируем нажатие Delete для начала боя (по вашему описанию).
     """
     focus_game_window()
-    pydirectinput.keyDown(KEY_DELETE)
+    pyautogui.keyDown(KEY_DELETE)
     time.sleep(0.1)
-    pydirectinput.keyUp(KEY_DELETE)
+    pyautogui.keyUp(KEY_DELETE)
 
 
 def go_to_enemy_ext(player_x, player_y, enemy_x, enemy_y, num_clicks=5):
@@ -689,8 +690,8 @@ def go_to_enemy_ext(player_x, player_y, enemy_x, enemy_y, num_clicks=5):
     
     # Если уже на месте
     if (player_x == enemy_x) and (player_y == enemy_y):
-        pydirectinput.moveTo(player_x, player_y)
-        pydirectinput.click()
+        pyautogui.moveTo(player_x, player_y)
+        pyautogui.click()
         return
 
     for i in range(num_clicks):
@@ -795,30 +796,30 @@ def exit_battle():
         if check_battle_status() is not False:
             focus_game_window()
             
-            pydirectinput.press(KEY_UNDO)
+            pyautogui.press(KEY_UNDO)
             time.sleep(0.1)
             
-            pydirectinput.keyDown(KEY_EXIT_BAT)
+            pyautogui.keyDown(KEY_EXIT_BAT)
             time.sleep(0.1)
-            pydirectinput.keyUp(KEY_EXIT_BAT)
+            pyautogui.keyUp(KEY_EXIT_BAT)
 
-            pydirectinput.keyDown(KEY_EXIT_BAT)
+            pyautogui.keyDown(KEY_EXIT_BAT)
             time.sleep(0.1)
-            pydirectinput.keyUp(KEY_EXIT_BAT)
+            pyautogui.keyUp(KEY_EXIT_BAT)
             
             time.sleep(2)
 
             # Несколько попыток найти окно статистики
             for j in range(5):
-                # pydirectinput.keyDown(KEY_ENTER)
+                # pyautogui.keyDown(KEY_ENTER)
                 # time.sleep(0.1)
-                # pydirectinput.keyUp(KEY_ENTER)
+                # pyautogui.keyUp(KEY_ENTER)
                 logging.info(f"Проверяем окно окончания боя, попытка {j}")
                 if is_stats_popup():
                     logging.info("Закрываем окно статистики (Enter).")
-                    pydirectinput.keyDown(KEY_ENTER)
+                    pyautogui.keyDown(KEY_ENTER)
                     time.sleep(0.1)
-                    pydirectinput.keyUp(KEY_ENTER)
+                    pyautogui.keyUp(KEY_ENTER)
                     time.sleep(0.5)
                     break
                 time.sleep(1)
@@ -838,8 +839,8 @@ def attack_enemies(enemies_list):
     """
     for (x, y) in enemies_list:
         for _ in range(N_HITS):
-            pydirectinput.moveTo(x + 5, y + 5)
-            pydirectinput.click(button=ATTACK_BTN)
+            pyautogui.moveTo(x + 5, y + 5)
+            pyautogui.click(button=ATTACK_BTN)
         cancel_popups()
 
 def get_all_enemies_around_player(player_x, player_y,
@@ -879,23 +880,23 @@ def perform_battle_turn_old(attack_zone_width=330, attack_zone_height=320):
       5) Нажимаем D, завершаем ход.
     """
     focus_game_window()
-    pydirectinput.keyDown(KEY_ENTER)
+    pyautogui.keyDown(KEY_ENTER)
     time.sleep(0.1)
-    pydirectinput.keyUp(KEY_ENTER)
+    pyautogui.keyUp(KEY_ENTER)
 
     time.sleep(0.2)
 
-    # pydirectinput.press(KEY_SPACE)  # центрируем камеру
+    # pyautogui.press(KEY_SPACE)  # центрируем камеру
     # time.sleep(1)
 
     # Отменяем старый маршрут
-    pydirectinput.press(KEY_UNDO)
+    pyautogui.press(KEY_UNDO)
     time.sleep(0.1)
 
-    # pydirectinput.moveTo(0, 0)
+    # pyautogui.moveTo(0, 0)
 
     # # Перезарядка оружия
-    # pydirectinput.press(KEY_RELOAD_W)
+    # pyautogui.press(KEY_RELOAD_W)
     # time.sleep(0.1)
 
     """Базовый метод"""
@@ -905,7 +906,7 @@ def perform_battle_turn_old(attack_zone_width=330, attack_zone_height=320):
         # focus_game_window()
         # time.sleep(0.1)
         # logging.info("Завершаем ход (D).")
-        # pydirectinput.press(KEY_D)
+        # pyautogui.press(KEY_D)
         # return
 
     # in_zone, out_zone, nearest_outside = get_all_enemies_around_player(
@@ -968,7 +969,7 @@ def perform_battle_turn_old(attack_zone_width=330, attack_zone_height=320):
                 focus_game_window()
                 time.sleep(0.1)
                 logging.info("Завершаем ход (D).")
-                pydirectinput.press(KEY_D)
+                pyautogui.press(KEY_D)
                 return
 
             # in_zone, out_zone, nearest_outside = get_all_enemies_around_player(
@@ -1008,10 +1009,10 @@ def perform_battle_turn_old(attack_zone_width=330, attack_zone_height=320):
             if (ap is not None) and ap < LAST_PLAYER_STEP:
                 logging.warning("Недостаточно ОД для прохода к противнику!")
                 # центрируем камеру
-                pydirectinput.press(KEY_SPACE)
+                pyautogui.press(KEY_SPACE)
 
                 # # Перезарядка оружия
-                # pydirectinput.press(KEY_RELOAD_W)
+                # pyautogui.press(KEY_RELOAD_W)
                 # time.sleep(0.1)
                 break
             else:
@@ -1097,11 +1098,11 @@ def perform_battle_turn_old(attack_zone_width=330, attack_zone_height=320):
     time.sleep(0.1)
 
     # Перезарядка оружия
-    pydirectinput.press(KEY_RELOAD_W)
+    pyautogui.press(KEY_RELOAD_W)
     time.sleep(0.1)
 
     logging.info("Завершаем ход в штатном режиме (D).")
-    pydirectinput.press(KEY_D)
+    pyautogui.press(KEY_D)
 
 def perform_battle_turn(attack_zone_width=330, attack_zone_height=320):
     """
@@ -1115,30 +1116,30 @@ def perform_battle_turn(attack_zone_width=330, attack_zone_height=320):
     global FIRST_TURN
 
     focus_game_window()
-    pydirectinput.keyDown(KEY_ENTER)
+    pyautogui.keyDown(KEY_ENTER)
     time.sleep(0.1)
-    pydirectinput.keyUp(KEY_ENTER)
+    pyautogui.keyUp(KEY_ENTER)
 
     time.sleep(0.2)
 
     # центрируем камеру
-    # pydirectinput.press(KEY_SPACE)
+    # pyautogui.press(KEY_SPACE)
     # time.sleep(1)
 
     # Отменяем старый маршрут
-    pydirectinput.press(KEY_UNDO)
+    pyautogui.press(KEY_UNDO)
     time.sleep(0.1)
 
     # # Перезарядка оружия
-    # pydirectinput.press(KEY_RELOAD_W)
+    # pyautogui.press(KEY_RELOAD_W)
     # time.sleep(0.1)
 
     if FIRST_TURN:
         FIRST_TURN = False
         # Выкинуть 4 секцию рюкзака
-        pydirectinput.press(KEY_DROP_ITEM)
+        pyautogui.press(KEY_DROP_ITEM)
         time.sleep(0.1)
-        pydirectinput.press(KEY_ENTER)
+        pyautogui.press(KEY_ENTER)
 
     """Новый метод с циклом"""
     
@@ -1174,7 +1175,7 @@ def perform_battle_turn(attack_zone_width=330, attack_zone_height=320):
                 focus_game_window()
                 time.sleep(0.1)
                 logging.info("Завершаем ход (D).")
-                pydirectinput.press(KEY_D)
+                pyautogui.press(KEY_D)
                 return
 
             # Определяем монстров в заданной зоне около игрока 
@@ -1203,10 +1204,10 @@ def perform_battle_turn(attack_zone_width=330, attack_zone_height=320):
             if (ap is not None) and ap < LAST_PLAYER_STEP:
                 logging.warning("Недостаточно ОД для прохода к противнику!")
                 # центрируем камеру
-                pydirectinput.press(KEY_SPACE)
+                pyautogui.press(KEY_SPACE)
 
                 # # Перезарядка оружия
-                # pydirectinput.press(KEY_RELOAD_W)
+                # pyautogui.press(KEY_RELOAD_W)
                 # time.sleep(0.1)
                 break
             else:
@@ -1231,11 +1232,11 @@ def perform_battle_turn(attack_zone_width=330, attack_zone_height=320):
     time.sleep(0.1)
 
     # Перезарядка оружия
-    pydirectinput.press(KEY_RELOAD_W)
+    pyautogui.press(KEY_RELOAD_W)
     time.sleep(0.1)
 
     logging.info("Завершаем ход в штатном режиме (D).")
-    pydirectinput.press(KEY_D)
+    pyautogui.press(KEY_D)
 
 def test_attack(attack_zone_width=330, attack_zone_height=320, attack_zone_extra_width=150):
     # 1. Ищем всех врагов
@@ -1254,7 +1255,7 @@ def test_attack(attack_zone_width=330, attack_zone_height=320, attack_zone_extra
             focus_game_window()
             time.sleep(0.1)
             logging.info("Завершаем ход (D).")
-            pydirectinput.press(KEY_D)
+            pyautogui.press(KEY_D)
             return
 
         in_zone, out_zone, nearest_outside = separate_enemies_by_hex(
@@ -1328,7 +1329,7 @@ def main_loop():
         logging.info(f"Завершено боёв: {total_battles}")
 
         # На всякий случай жмём ENTER — закрыть окно окончания боя, если висит
-        pydirectinput.press(KEY_ENTER)
+        pyautogui.press(KEY_ENTER)
 
         logging.info(f"Попытка начать бой № {battle_attempt}")
 
