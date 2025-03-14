@@ -37,6 +37,7 @@ KEY_RELOAD_W  = os.environ.get("KEY_RELOAD_W", "r")
 KEY_DROP_ITEM = os.environ.get("KEY_DROP_ITEM", "9")
 
 KEY_STOP_SCRIPT = os.environ.get("KEY_STOP_SCRIPT", "ctrl+shift+z")
+KEY_STOP_SCRIPT_AFTER_BATTLE = os.environ.get("KEY_STOP_SCRIPT_AFTER_BATTLE", "ctrl+shift+q")
 
 # KEY_ENTER="enter"
 # KEY_SPACE="space"
@@ -96,6 +97,7 @@ MIN_ACTION_POINT = 5
 
 # Глобальный флаг для управления основным циклом
 RUNNING = True
+STOP_AFTER_BATTLE = False
 
 FIRST_TURN = True
 
@@ -376,7 +378,7 @@ def get_action_points():
 #                         ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ                              #
 ###############################################################################
 
-def take_screenshot_region(region):
+def _take_screenshot_region(region):
     """
     Делает скриншот указанной области экрана (region=(x, y, width, height))
     и возвращает BGR-изображение (numpy-массив).
@@ -386,6 +388,36 @@ def take_screenshot_region(region):
     screenshot_bgr = cv2.cvtColor(screenshot_np, cv2.COLOR_RGB2BGR)
     return screenshot_bgr
 
+
+def take_screenshot_region(region, max_retries=3, delay=1):
+    """
+    Делает скриншот указанной области экрана (region=(x, y, width, height))
+    и возвращает BGR-изображение (numpy-массив).
+    
+    Если возникает OSError (например, "screen grab failed"),
+    повторно пытается сделать скриншот до max_retries раз с задержкой delay (секунд).
+    Если все попытки неудачны, выбрасывает последнее исключение.
+    
+    :param region: (left, top, width, height)
+    :param max_retries: сколько раз пытаться
+    :param delay: пауза в секундах между попытками
+    :return: numpy-массив (BGR) изображения
+    """
+    last_exception = None
+    for attempt in range(1, max_retries + 1):
+        try:
+            screenshot = pyautogui.screenshot(region=region)
+            screenshot_np = np.array(screenshot)
+            screenshot_bgr = cv2.cvtColor(screenshot_np, cv2.COLOR_RGB2BGR)
+            return screenshot_bgr
+        except OSError as e:
+            # Ловим ошибку "screen grab failed" и пробуем снова
+            logging.warning(f"Попытка {attempt} сделать скриншот не удалась: {e}")
+            last_exception = e
+            time.sleep(delay)
+    # Если дошли сюда, значит все попытки исчерпаны
+    logging.error(f"Не удалось сделать скриншот после {max_retries} попыток.")
+    raise last_exception  # выбрасываем последнее исключение
 
 def match_exists(screen_gray, template_gray, threshold=0.8):
     """
@@ -1191,6 +1223,9 @@ def perform_battle_turn(attack_zone_width=330, attack_zone_height=320):
                 attack_zone_height,
                 extra_width=150
             )
+            if not RUNNING:
+                return
+
             # Атакуем близлежащих противников (если они найдены)
             if in_zone is not None:
                 attack_enemies(in_zone)
@@ -1213,7 +1248,9 @@ def perform_battle_turn(attack_zone_width=330, attack_zone_height=320):
                 logging.info(f"ОД хватает ({ap}), чтобы идти к противнику!")
 
             # Идём к самому близкому за зоной атаки
-            
+            if not RUNNING:
+                return
+    
             # Добавочная логика:
             # Пробуем сделать шаг,
                 # если изменилась координата, то ОК,
@@ -1302,15 +1339,22 @@ def process_battle():
 
 def stop_script():
     """
-    Глобальный хоткей: устанавливаем RUNNING=False, 
-    чтобы прервать основной цикл (main_loop).
+    Немедленная остановка скрипта: устанавливает RUNNING в False.
     """
     global RUNNING
-    logging.warning("Получен сигнал остановки скрипта!")
+    logging.warning("Получен сигнал немедленной остановки скрипта!")
     RUNNING = False
 
+def stop_after_battle():
+    """
+    Устанавливает флаг остановки после окончания текущего боя.
+    Скрипт завершится сразу после завершения текущей итерации боя.
+    """
+    global STOP_AFTER_BATTLE
+    logging.warning("Получен сигнал остановки скрипта после боя!")
+    STOP_AFTER_BATTLE = True
 
-def main_loop():
+def _main_loop():
     """
     Основной бесконечный цикл:
       1) Проверяем, не в бою ли персонаж:
@@ -1347,7 +1391,96 @@ def main_loop():
     logging.warning("Цикл остановлен, завершаем скрипт.")
 
 
-def main():
+def __main_loop(battles_limit=0):
+    """
+    Основной цикл:
+      1) Если персонаж не в бою – начинаем бой (start_battle).
+      2) Если в бою – process_battle().
+      3) Ограничение по числу боёв (battles_limit), если > 0.
+    """
+    global RUNNING
+    logging.info("Запуск основного цикла... (нажмите Ctrl+Shift+Z для остановки)")
+
+    battle_attempt = 1
+    total_battles = 0
+
+    while RUNNING:
+        # Проверяем, не достигнут ли лимит
+        if battles_limit > 0 and total_battles >= battles_limit:
+            logging.info(f"Достигнут лимит боёв: {battles_limit}. Останавливаемся.")
+            break
+
+        logging.info(f"Завершено боёв: {total_battles}")
+
+        # На всякий случай жмём ENTER — закрыть окно окончания боя, если висит
+        pydirectinput.press(KEY_ENTER)
+
+        logging.info(f"Попытка начать бой № {battle_attempt}")
+
+        # Проверяем статус боя
+        if check_battle_status() == False:
+            # Не в бою — жмём Delete для начала
+            start_battle()
+            time.sleep(3)
+        else:
+            # Уже в бою — обрабатываем его
+            process_battle()
+            total_battles += 1
+
+        battle_attempt += 1
+
+    logging.warning("Цикл остановлен, завершаем скрипт.")
+
+###############################################################################
+#                            ОСНОВНОЙ ЦИКЛ РАБОТЫ
+###############################################################################
+
+def main_loop(battles_limit=0):
+    """
+    Основной цикл работы скрипта:
+      - Если персонаж не в бою, начинает бой (start_battle).
+      - Если персонаж в бою, обрабатывает бой (process_battle).
+      - Если установлен флаг STOP_AFTER_BATTLE, завершает цикл после текущего боя.
+      - Если задан лимит боёв (> 0) и их достигнуто, цикл завершает работу.
+      
+    :param battles_limit: int, количество боёв до остановки (0 – безлимит)
+    """
+    global RUNNING, STOP_AFTER_BATTLE
+
+    logging.info(f"Запуск основного цикла... ({KEY_STOP_SCRIPT} – немедленная остановка, {KEY_STOP_SCRIPT_AFTER_BATTLE} – остановка после боя)")
+    battle_attempt = 1
+    total_battles = 0
+
+    while RUNNING:
+        # Если задан лимит боёв и он достигнут, завершаем цикл
+        if battles_limit > 0 and total_battles >= battles_limit:
+            logging.info(f"Достигнут лимит боёв: {battles_limit}. Останавливаем скрипт.")
+            break
+
+        logging.info(f"Попытка начать бой № {battle_attempt}")
+
+        # На всякий случай жмём ENTER, чтобы закрыть возможное всплывающее окно
+        pydirectinput.press(KEY_ENTER)
+
+        # Проверяем, в бою ли персонаж
+        if not check_battle_status():
+            start_battle()
+            time.sleep(3)
+        else:
+            process_battle()
+            total_battles += 1
+            # Если флаг остановки после боя установлен, выходим
+            if STOP_AFTER_BATTLE:
+                logging.warning("Остановка после боя по запросу. Завершаем цикл.")
+                RUNNING = False
+                break
+
+        battle_attempt += 1
+
+    logging.warning("Основной цикл завершён. Скрипт остановлен.")
+
+
+def _main():
     """
     Точка входа в программу:
       1) Инициализируем ресурсы (загружаем шаблоны игрока и крыс в память).
@@ -1364,6 +1497,53 @@ def main():
     main_loop()
 
 
+def __main():
+    """
+    Точка входа. Спрашиваем у пользователя, сколько боёв нужно провести (0 – безлимитно).
+    Затем запускаем основной цикл.
+    """
+    init_resources()  # например, загрузка шаблонов и т.п.
+    # keyboard.add_hotkey(os.environ.get("KEY_STOP_SCRIPT", "ctrl+shift+z"), stop_script)
+    keyboard.add_hotkey(KEY_STOP_SCRIPT, stop_script)
+    
+    # Спрашиваем у пользователя лимит боёв
+    battles_limit_str = input("Введите число боёв, по достижении которого скрипт должен остановиться (0 – безлимит): ")
+    try:
+        battles_limit = int(battles_limit_str)
+    except ValueError:
+        logging.warning("Некорректный ввод. Будет использовано значение 0 (безлимит).")
+        battles_limit = 0
+
+    main_loop(battles_limit)
+
+###############################################################################
+#                                MAIN
+###############################################################################
+
+def main():
+    """
+    Точка входа:
+      0. Инициализируем ресурсы (загружаем шаблоны игрока и крыс в память).
+      1. Регистрируем горячие клавиши для остановки.
+      2. Запрашиваем у пользователя лимит боёв.
+      3. Запускаем основной цикл.
+    """
+
+    init_resources()  # Однократная загрузка иконок / поз / крыс в память
+
+    # Регистрируем глобальные хоткеи
+    keyboard.add_hotkey(KEY_STOP_SCRIPT, stop_script)
+    keyboard.add_hotkey(KEY_STOP_SCRIPT_AFTER_BATTLE, stop_after_battle)
+
+    # Запрашиваем лимит боёв у пользователя
+    battles_limit_str = input("Введите число боёв (0 для безлимитного режима): ")
+    try:
+        battles_limit = int(battles_limit_str)
+    except ValueError:
+        logging.warning("Некорректный ввод. Будет использовано 0 (безлимит).")
+        battles_limit = 0
+
+    main_loop(battles_limit)
 if __name__ == "__main__":
     main()
     
