@@ -1452,15 +1452,16 @@ def main_loop(battles_limit=0):
     total_battles = 0
 
     while RUNNING:
+        logging.info(f"Завершено боёв: {total_battles}")
         # Если задан лимит боёв и он достигнут, завершаем цикл
         if battles_limit > 0 and total_battles >= battles_limit:
             logging.info(f"Достигнут лимит боёв: {battles_limit}. Останавливаем скрипт.")
             break
-
-        logging.info(f"Попытка начать бой № {battle_attempt}")
-
+        
         # На всякий случай жмём ENTER, чтобы закрыть возможное всплывающее окно
         pydirectinput.press(KEY_ENTER)
+
+        logging.info(f"Попытка начать бой № {battle_attempt}")
 
         # Проверяем, в бою ли персонаж
         if not check_battle_status():
