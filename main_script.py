@@ -6,6 +6,7 @@ import time
 import math
 import random
 import logging
+import winsound
 import keyboard
 import numpy as np
 from dotenv import load_dotenv
@@ -1481,6 +1482,15 @@ def main_loop(battles_limit=0):
         battle_attempt += 1
 
     logging.warning("Основной цикл завершён. Скрипт остановлен.")
+    # pydirectinput.press("alt+tab")
+    
+    # pydirectinput.keyDown("ctrl")
+    # pydirectinput.keyDown("shift")
+    # pydirectinput.keyDown("esc")
+    # time.sleep(0.1)
+    # pydirectinput.keyUp("ctrl")
+    # pydirectinput.keyUp("shift")
+    # pydirectinput.keyUp("esc")
 
 
 def _main():
@@ -1547,6 +1557,7 @@ def main():
         battles_limit = 0
 
     main_loop(battles_limit)
+    winsound.PlaySound("alert_sound.wav", winsound.SND_FILENAME)
 
 if __name__ == "__main__":
     main()
