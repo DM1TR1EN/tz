@@ -10,6 +10,8 @@ import keyboard
 import numpy as np
 from dotenv import load_dotenv
 
+pydirectinput.FAILSAFE = False
+
 # Шаг 1: Загружаем переменные из .env
 load_dotenv()  # по умолчанию ищет файл .env в текущей директории
 
@@ -36,8 +38,8 @@ KEY_UNDO      = os.environ.get("KEY_UNDO", "u")
 KEY_RELOAD_W  = os.environ.get("KEY_RELOAD_W", "r")
 KEY_DROP_ITEM = os.environ.get("KEY_DROP_ITEM", "9")
 
-KEY_STOP_SCRIPT = os.environ.get("KEY_STOP_SCRIPT", "ctrl+shift+z")
-KEY_STOP_SCRIPT_AFTER_BATTLE = os.environ.get("KEY_STOP_SCRIPT_AFTER_BATTLE", "ctrl+shift+q")
+KEY_STOP_SCRIPT = os.environ.get("KEY_STOP_SCRIPT", "shift+z")
+KEY_STOP_SCRIPT_AFTER_BATTLE = os.environ.get("KEY_STOP_SCRIPT_AFTER_BATTLE", "shift+q")
 
 # KEY_ENTER="enter"
 # KEY_SPACE="space"
@@ -389,7 +391,7 @@ def _take_screenshot_region(region):
     return screenshot_bgr
 
 
-def take_screenshot_region(region, max_retries=3, delay=1):
+def take_screenshot_region(region, max_retries=5, delay=1):
     """
     Делает скриншот указанной области экрана (region=(x, y, width, height))
     и возвращает BGR-изображение (numpy-массив).
