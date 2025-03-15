@@ -41,6 +41,7 @@ KEY_DROP_ITEM = os.environ.get("KEY_DROP_ITEM", "9")
 
 KEY_STOP_SCRIPT = os.environ.get("KEY_STOP_SCRIPT", "shift+z")
 KEY_STOP_SCRIPT_AFTER_BATTLE = os.environ.get("KEY_STOP_SCRIPT_AFTER_BATTLE", "shift+q")
+KEY_PAUSE_SCRIPT = os.environ.get("KEY_PAUSE_SCRIPT", "left+right")
 
 # KEY_ENTER="enter"
 # KEY_SPACE="space"
@@ -98,8 +99,12 @@ LAST_PLAYER_STEP = 32
 
 MIN_ACTION_POINT = 5
 
+# Время паузы в секундах
+PAUSE_DELAY = 10
+
 # Глобальный флаг для управления основным циклом
 RUNNING = True
+PAUSE = False
 STOP_AFTER_BATTLE = False
 
 FIRST_TURN = True
@@ -1147,7 +1152,7 @@ def perform_battle_turn(attack_zone_width=330, attack_zone_height=320):
       4) Атакуем ближних, двигаемся к ближайшему дальнему (если есть).
       5) Нажимаем D, завершаем ход.
     """
-    global FIRST_TURN
+    global FIRST_TURN, RUNNING, PAUSE
 
     focus_game_window()
     pydirectinput.keyDown(KEY_ENTER)
@@ -1192,6 +1197,12 @@ def perform_battle_turn(attack_zone_width=330, attack_zone_height=320):
             if not RUNNING:
                 return
 
+            if PAUSE:
+                PAUSE = False
+                logging.warning(f"Начало паузы...")
+                time.sleep(PAUSE_DELAY)
+                logging.warning(f"Пауза окончена!")
+
             logging.info(f"Связка атаки и прохода к противнику № {i+1}!")
 
             # Проверяем количество ОД для проведения атаки
@@ -1229,6 +1240,12 @@ def perform_battle_turn(attack_zone_width=330, attack_zone_height=320):
             if not RUNNING:
                 return
 
+            if PAUSE:
+                PAUSE = False
+                logging.warning(f"Начало паузы...")
+                time.sleep(PAUSE_DELAY)
+                logging.warning(f"Пауза окончена!")
+
             # Атакуем близлежащих противников (если они найдены)
             if in_zone is not None:
                 attack_enemies(in_zone)
@@ -1253,7 +1270,13 @@ def perform_battle_turn(attack_zone_width=330, attack_zone_height=320):
             # Идём к самому близкому за зоной атаки
             if not RUNNING:
                 return
-    
+
+            if PAUSE:
+                PAUSE = False
+                logging.warning(f"Начало паузы...")
+                time.sleep(PAUSE_DELAY)
+                logging.warning(f"Пауза окончена!")
+
             # Добавочная логика:
             # Пробуем сделать шаг,
                 # если изменилась координата, то ОК,
@@ -1318,7 +1341,7 @@ def process_battle():
       - Иначе делаем ход (perform_battle_turn).
       - Если check_battle_status -> False, значит персонаж вышел из боя.
     """
-    global FIRST_TURN
+    global FIRST_TURN, RUNNING
     FIRST_TURN = True
 
     while True:
@@ -1333,12 +1356,21 @@ def process_battle():
             else:
                 if not RUNNING:
                     return
+                if is_color_present_in_region():
+                    RUNNING = False
+                    winsound.PlaySound("alert_enemy_sound.wav", winsound.SND_FILENAME)
+                    return
                 perform_battle_turn()
         time.sleep(0.5)
 
 ###############################################################################
 #                           ОСНОВНОЙ ЦИКЛ РАБОТЫ                              #
 ###############################################################################
+
+def pause_script():
+    global PAUSE
+    logging.warning("Получен сигнал приостановки скрипта!")
+    PAUSE = True
 
 def stop_script():
     """
@@ -1434,6 +1466,40 @@ def __main_loop(battles_limit=0):
 
     logging.warning("Цикл остановлен, завершаем скрипт.")
 
+def is_color_present_in_region(region=(1660, 125, 260, 120), target_color=(255, 0, 0), tolerance=10):
+    """
+    Проверяет, присутствует ли хотя бы один пиксель, близкий по цвету к target_color,
+    в заданной области экрана.
+    
+    :param region: кортеж (x, y, width, height) области для скриншота.
+    :param target_color: кортеж (R, G, B) целевого цвета (значения 0–255).
+    :param tolerance: допустимое отклонение для каждого канала (по умолчанию 10).
+    :return: True, если найден хотя бы один пиксель, удовлетворяющий условию; иначе False.
+    """
+    # Снимаем скриншот области
+    img_bgr = take_screenshot_region(region)
+    
+    # Преобразуем target_color из RGB в BGR
+    target_color_bgr = (target_color[2], target_color[1], target_color[0])
+    
+    # Приводим изображение к типу int16 для безопасного вычитания
+    img_int = img_bgr.astype(np.int16)
+    target_arr = np.array(target_color_bgr, dtype=np.int16)
+    
+    # Вычисляем абсолютную разницу по каналам
+    diff = np.abs(img_int - target_arr)
+    
+    # Создаем маску: True, если во всех каналах разница не превышает tolerance
+    mask = np.all(diff <= tolerance, axis=2)
+    
+    if np.any(mask):
+        logging.info(f"Найден хотя бы один пиксель с цветом {target_color} (±{tolerance}) в области {region}.")
+        return True
+    else:
+        logging.info(f"Пиксель с цветом {target_color} (±{tolerance}) в области {region} не найден.")
+        return False
+
+
 ###############################################################################
 #                            ОСНОВНОЙ ЦИКЛ РАБОТЫ
 ###############################################################################
@@ -1456,6 +1522,7 @@ def main_loop(battles_limit=0):
 
     while RUNNING:
         logging.info(f"Завершено боёв: {total_battles}")
+
         # Если задан лимит боёв и он достигнут, завершаем цикл
         if battles_limit > 0 and total_battles >= battles_limit:
             logging.info(f"Достигнут лимит боёв: {battles_limit}. Останавливаем скрипт.")
@@ -1473,6 +1540,7 @@ def main_loop(battles_limit=0):
         else:
             process_battle()
             total_battles += 1
+
             # Если флаг остановки после боя установлен, выходим
             if STOP_AFTER_BATTLE:
                 logging.warning("Остановка после боя по запросу. Завершаем цикл.")
@@ -1482,15 +1550,6 @@ def main_loop(battles_limit=0):
         battle_attempt += 1
 
     logging.warning("Основной цикл завершён. Скрипт остановлен.")
-    # pydirectinput.press("alt+tab")
-    
-    # pydirectinput.keyDown("ctrl")
-    # pydirectinput.keyDown("shift")
-    # pydirectinput.keyDown("esc")
-    # time.sleep(0.1)
-    # pydirectinput.keyUp("ctrl")
-    # pydirectinput.keyUp("shift")
-    # pydirectinput.keyUp("esc")
 
 
 def _main():
@@ -1547,6 +1606,7 @@ def main():
     # Регистрируем глобальные хоткеи
     keyboard.add_hotkey(KEY_STOP_SCRIPT, stop_script)
     keyboard.add_hotkey(KEY_STOP_SCRIPT_AFTER_BATTLE, stop_after_battle)
+    keyboard.add_hotkey(KEY_PAUSE_SCRIPT, pause_script)
 
     # Запрашиваем лимит боёв у пользователя
     battles_limit_str = input("Введите число боёв (0 для безлимитного режима): ")
@@ -1565,3 +1625,16 @@ if __name__ == "__main__":
     # init_resources()
     # test_attack()
     # get_player_coords(REGION)
+    
+    # # Пример области: (x, y, width, height)
+    # region = (1660, 125, 1920-1660, 250-150)
+    # # Ищем, например, красный цвет (R, G, B)
+    # target_color = (255, 0, 0) # противник
+    # # target_color = (254, 174, 44)
+    # tolerance = 15
+    
+    # found = is_color_present_in_region(region, target_color, tolerance)
+    # if found:
+        # logging.info("Целевой цвет найден в указанной области.")
+    # else:
+        # logging.info("Целевой цвет отсутствует в указанной области.")
