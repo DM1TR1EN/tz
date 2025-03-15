@@ -1545,6 +1545,7 @@ def main():
         battles_limit = 0
 
     main_loop(battles_limit)
+
 if __name__ == "__main__":
     main()
     
