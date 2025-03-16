@@ -716,17 +716,21 @@ def start_battle():
     pydirectinput.keyUp(KEY_DELETE)
 
 
-def go_to_enemy_ext(player_x, player_y, enemy_x, enemy_y, num_clicks=5):
+def go_to_enemy_ext(player_x, player_y, enemy_x, enemy_y, num_clicks=6):
     """
     Пытается переместиться к противнику, делая несколько SHIFT-кликов вокруг (enemy_x, enemy_y).
     Проверяем после каждого клика, сместился ли игрок.
     """
-    logging.info(f"Попытка переместиться к противнику: {enemy_x},{enemy_y}")
+    logging.info(f"Пробуем переместиться к противнику: {enemy_x},{enemy_y}")
+    logging.info(f"Текущие координаты игрока: {player_x} : {player_y}")
     # rnd_shuffle_x = [-36, 36, -34, 38, -36, 36, -34, 38]
     # rnd_shuffle_y = [-18, 18, -15, 20, -18, 18, -15, 20]
     rnd_shuffle_x = [-34, 34]
     rnd_shuffle_y = [-16, 16]
     
+    around_x = [-18, 18, -18,  18,  36, -36]
+    around_y = [-18, 18,  18, -18,   0,   0]
+
     # Если уже на месте
     if (player_x == enemy_x) and (player_y == enemy_y):
         pydirectinput.moveTo(player_x, player_y)
@@ -734,25 +738,36 @@ def go_to_enemy_ext(player_x, player_y, enemy_x, enemy_y, num_clicks=5):
         return
 
     for i in range(num_clicks):
+        logging.info(f"Пытаемся кликнуть рядом с противником... {i}")
+        # shift_click(
+            # enemy_x + random.choice(rnd_shuffle_x),
+            # enemy_y + random.choice(rnd_shuffle_y)
+        # )
         shift_click(
-            enemy_x + random.choice(rnd_shuffle_x),
-            enemy_y + random.choice(rnd_shuffle_y)
+            enemy_x + around_x[i],
+            enemy_y + around_y[i]
         )
         cancel_popups()
 
-        px_new, py_new = get_player_coords(REGION)
-        # if px_new is not None and py_new is not None:
-            # dist_sqr = (px_new - player_x)**2 + (py_new - player_y)**2
-            # if dist_sqr > 10:
-                # logging.info("Персонаж переместился, успех!")
-                # return
+        region_around_player = (player_x-5, player_y-36-5, 20, 50)
+        px_new, py_new = get_player_coords(region_around_player)
+        logging.warning(f"Новые координаты персонажа: ({px_new} : {py_new})")
+
+        # px_new, py_new = get_player_coords(REGION)
+
+        # # if px_new is not None and py_new is not None:
+            # # dist_sqr = (px_new - player_x)**2 + (py_new - player_y)**2
+            # # if dist_sqr > 10:
+                # # logging.info("Персонаж переместился, успех!")
+                # # return
 
         # Если у игрока сменились координаты, значит задача выполнена
         if (px_new != player_x) or (py_new != player_y):
             logging.info("Персонаж переместился, это успех!")
             return
 
-    logging.warning("Не удалось переместиться к противнику. Сдвиг не зафиксирован.")
+    logging.warning("Не удалось переместиться к противнику. Возможно игрок застрял!")
+    winsound.PlaySound("trouble.wav", winsound.SND_FILENAME)
 
 ###############################################################################
 #                  ФУНКЦИИ ПРОВЕРКИ СТАТУСА БОЯ / ВЫХОДА ИЗ БОЯ               #
@@ -1288,7 +1303,16 @@ def perform_battle_turn(attack_zone_width=330, attack_zone_height=320):
                 logging.warning("За зоной атаки противников не найдено, идти некуда!")
                 break
     else:
-        logging.info("Крыс не обнаружено в зоне!")    
+        logging.info("Крыс не обнаружено в зоне!")
+
+        # центрируем камеру
+        pydirectinput.press(KEY_SPACE)
+        
+        # немного побродим по окрестности
+        pydirectinput.press("home")
+        pydirectinput.press("pageup")
+        pydirectinput.press("pagedown")
+        
 
     focus_game_window()
     time.sleep(0.1)
@@ -1389,83 +1413,6 @@ def stop_after_battle():
     logging.warning("Получен сигнал остановки скрипта после боя!")
     STOP_AFTER_BATTLE = True
 
-def _main_loop():
-    """
-    Основной бесконечный цикл:
-      1) Проверяем, не в бою ли персонаж:
-         - Если нет, начинаем бой (start_battle).
-         - Если да, обрабатываем бой (process_battle).
-      2) Повторяем, пока RUNNING=True.
-    """
-    global RUNNING
-    logging.info("Запуск основного цикла... (нажмите Ctrl+Shift+Z для остановки)")
-
-    battle_attempt = 1
-    total_battles = 0
-
-    while RUNNING:
-        logging.info(f"Завершено боёв: {total_battles}")
-
-        # На всякий случай жмём ENTER — закрыть окно окончания боя, если висит
-        pydirectinput.press(KEY_ENTER)
-
-        logging.info(f"Попытка начать бой № {battle_attempt}")
-
-        # Проверяем статус боя
-        if check_battle_status() == False:
-            # Не в бою — жмём Delete для начала
-            start_battle()
-            time.sleep(3)
-        else:
-            # Уже в бою — обрабатываем его
-            process_battle()
-            total_battles += 1
-
-        battle_attempt += 1
-
-    logging.warning("Цикл остановлен, завершаем скрипт.")
-
-
-def __main_loop(battles_limit=0):
-    """
-    Основной цикл:
-      1) Если персонаж не в бою – начинаем бой (start_battle).
-      2) Если в бою – process_battle().
-      3) Ограничение по числу боёв (battles_limit), если > 0.
-    """
-    global RUNNING
-    logging.info("Запуск основного цикла... (нажмите Ctrl+Shift+Z для остановки)")
-
-    battle_attempt = 1
-    total_battles = 0
-
-    while RUNNING:
-        # Проверяем, не достигнут ли лимит
-        if battles_limit > 0 and total_battles >= battles_limit:
-            logging.info(f"Достигнут лимит боёв: {battles_limit}. Останавливаемся.")
-            break
-
-        logging.info(f"Завершено боёв: {total_battles}")
-
-        # На всякий случай жмём ENTER — закрыть окно окончания боя, если висит
-        pydirectinput.press(KEY_ENTER)
-
-        logging.info(f"Попытка начать бой № {battle_attempt}")
-
-        # Проверяем статус боя
-        if check_battle_status() == False:
-            # Не в бою — жмём Delete для начала
-            start_battle()
-            time.sleep(3)
-        else:
-            # Уже в бою — обрабатываем его
-            process_battle()
-            total_battles += 1
-
-        battle_attempt += 1
-
-    logging.warning("Цикл остановлен, завершаем скрипт.")
-
 def is_color_present_in_region(region=(1660, 125, 260, 120), target_color=(255, 0, 0), tolerance=10):
     """
     Проверяет, присутствует ли хотя бы один пиксель, близкий по цвету к target_color,
@@ -1552,42 +1499,6 @@ def main_loop(battles_limit=0):
     logging.warning("Основной цикл завершён. Скрипт остановлен.")
 
 
-def _main():
-    """
-    Точка входа в программу:
-      1) Инициализируем ресурсы (загружаем шаблоны игрока и крыс в память).
-      2) Регистрируем горячую клавишу (Ctrl+Shift+Z) для прерывания работы.
-      3) Запускаем основной цикл.
-    """
-    init_resources()  # Однократная загрузка иконок / поз / крыс в память
-
-    # Регистрируем хоткей остановки
-    # keyboard.add_hotkey('ctrl+shift+z', stop_script)
-    keyboard.add_hotkey(KEY_STOP_SCRIPT, stop_script)
-
-    # Запускаем основной цикл
-    main_loop()
-
-
-def __main():
-    """
-    Точка входа. Спрашиваем у пользователя, сколько боёв нужно провести (0 – безлимитно).
-    Затем запускаем основной цикл.
-    """
-    init_resources()  # например, загрузка шаблонов и т.п.
-    # keyboard.add_hotkey(os.environ.get("KEY_STOP_SCRIPT", "ctrl+shift+z"), stop_script)
-    keyboard.add_hotkey(KEY_STOP_SCRIPT, stop_script)
-    
-    # Спрашиваем у пользователя лимит боёв
-    battles_limit_str = input("Введите число боёв, по достижении которого скрипт должен остановиться (0 – безлимит): ")
-    try:
-        battles_limit = int(battles_limit_str)
-    except ValueError:
-        logging.warning("Некорректный ввод. Будет использовано значение 0 (безлимит).")
-        battles_limit = 0
-
-    main_loop(battles_limit)
-
 ###############################################################################
 #                                MAIN
 ###############################################################################
@@ -1621,7 +1532,7 @@ def main():
 
 if __name__ == "__main__":
     main()
-    
+
     # init_resources()
     # test_attack()
     # get_player_coords(REGION)
