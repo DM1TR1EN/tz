@@ -102,6 +102,8 @@ MIN_ACTION_POINT = 5
 # Время паузы в секундах
 PAUSE_DELAY = 10
 
+PRE_PLAYER_X, PRE_PLAYER_Y = None, None
+
 # Глобальный флаг для управления основным циклом
 RUNNING = True
 PAUSE = False
@@ -722,11 +724,9 @@ def go_to_enemy_ext(player_x, player_y, enemy_x, enemy_y, num_clicks=6):
     Проверяем после каждого клика, сместился ли игрок.
     """
     logging.info(f"Пробуем переместиться к противнику: {enemy_x},{enemy_y}")
-    logging.info(f"Текущие координаты игрока: {player_x} : {player_y}")
-    # rnd_shuffle_x = [-36, 36, -34, 38, -36, 36, -34, 38]
-    # rnd_shuffle_y = [-18, 18, -15, 20, -18, 18, -15, 20]
-    rnd_shuffle_x = [-34, 34]
-    rnd_shuffle_y = [-16, 16]
+    logging.info(f"Текущие координаты игрока: ({player_x} : {player_y})")
+    # rnd_shuffle_x = [-34, 34]
+    # rnd_shuffle_y = [-16, 16]
     
     around_x = [-18, 18, -18,  18,  36, -36]
     around_y = [-18, 18,  18, -18,   0,   0]
@@ -749,7 +749,9 @@ def go_to_enemy_ext(player_x, player_y, enemy_x, enemy_y, num_clicks=6):
         )
         cancel_popups()
 
+        # Определяем зону около игрока, где будем проверять иконку игрока
         region_around_player = (player_x-5, player_y-36-5, 20, 50)
+
         px_new, py_new = get_player_coords(region_around_player)
         logging.warning(f"Новые координаты персонажа: ({px_new} : {py_new})")
 
@@ -767,7 +769,7 @@ def go_to_enemy_ext(player_x, player_y, enemy_x, enemy_y, num_clicks=6):
             return
 
     logging.warning("Не удалось переместиться к противнику. Возможно игрок застрял!")
-    winsound.PlaySound("trouble.wav", winsound.SND_FILENAME)
+    # winsound.PlaySound("trouble.wav", winsound.SND_FILENAME)
 
 ###############################################################################
 #                  ФУНКЦИИ ПРОВЕРКИ СТАТУСА БОЯ / ВЫХОДА ИЗ БОЯ               #
@@ -924,239 +926,20 @@ def get_all_enemies_around_player(player_x, player_y,
         # logging.info(f"Ближайший (вне зоны): {nearest_outside}")
         return in_zone, out_zone, nearest_outside
 
-def perform_battle_turn_old(attack_zone_width=330, attack_zone_height=320):
-    """
-    Совершает один 'ход' в бою:
-      1) Фокус на окне, жмём Enter (закрыть окошко, если есть).
-      2) Центрируем камеру (пробел).
-      3) Находим игрока, ищем крыс, делим на ближних/дальних.
-      4) Атакуем ближних, двигаемся к ближайшему дальнему (если есть).
-      5) Нажимаем D, завершаем ход.
-    """
-    focus_game_window()
-    pydirectinput.keyDown(KEY_ENTER)
-    time.sleep(0.1)
-    pydirectinput.keyUp(KEY_ENTER)
+def check_global_hotkeys():
+    global RUNNING, PAUSE, PAUSE_DELAY
+    ### Проверка хоткеев
+    # Если был нажат хоткей немедленного останова скрипта
+    if not RUNNING:
+        return
 
-    time.sleep(0.2)
+    # Если был нажат хоткей паузы
+    if PAUSE:
+        PAUSE = False
+        logging.warning(f"НАЧАЛО ПАУЗЫ...")
+        time.sleep(PAUSE_DELAY)
+        logging.warning(f"ПАУЗА ОКОНЧЕНА!")
 
-    # pydirectinput.press(KEY_SPACE)  # центрируем камеру
-    # time.sleep(1)
-
-    # Отменяем старый маршрут
-    pydirectinput.press(KEY_UNDO)
-    time.sleep(0.1)
-
-    # pydirectinput.moveTo(0, 0)
-
-    # # Перезарядка оружия
-    # pydirectinput.press(KEY_RELOAD_W)
-    # time.sleep(0.1)
-
-    """Базовый метод"""
-    # player_x, player_y = get_player_coords(REGION)
-    # if player_x is None:
-        # logging.warning("Персонаж не обнаружен на поле боя!")
-        # focus_game_window()
-        # time.sleep(0.1)
-        # logging.info("Завершаем ход (D).")
-        # pydirectinput.press(KEY_D)
-        # return
-
-    # in_zone, out_zone, nearest_outside = get_all_enemies_around_player(
-        # player_x, player_y,
-        # attack_zone_width,
-        # attack_zone_height
-    # )
-
-    # if in_zone is not None:
-        # # Атакуем ближних
-        # attack_enemies(in_zone)
-
-    # # Идём к самому близкому дальнему
-    # if nearest_outside is not None:
-        # go_to_enemy_ext(player_x, player_y,
-                        # nearest_outside[0] + 5, nearest_outside[1] + 5)
-
-        # # Пробуем получить очки действия
-        # ap = get_action_points()
-        # if (ap is not None) and (ap > 2):
-            # logging.info("Пробуем снова найти игрока и противников вокруг!")
-
-            # player_x, player_y = get_player_coords(REGION)
-            # if player_x is not None:
-                # in_zone_new, _, _ = get_all_enemies_around_player(
-                    # player_x, player_y,
-                    # attack_zone_width,
-                    # attack_zone_height
-                # )
-
-                # if in_zone_new is not None:
-                    # in_zone_new = list(set(in_zone_new) - set(in_zone)) 
-                    # logging.info("Снова атакуем ближних!")
-                    # # Атакуем ближних
-                    # attack_enemies(in_zone_new)
-        # else:
-            # logging.info("Слишком мало очков действия для дополнительной атаки!")
-    # else:
-        # logging.info("Вне зоны атаки противников нет.")
-
-    """Новый метод с циклом"""
-    
-    # 1. Ищем всех врагов до цикла
-    
-    # # Ищем крыс
-    enemies = find_all_rat_enemies_in_region(REGION, RAT_TEMPLATES, threshold=0.93)
-        
-    if enemies:
-        logging.info(f"Найдено {len(enemies)} совпадений (противников).")
-        enemy_coords = [(ex, ey) for (ex, ey, _, _) in enemies]
-
-        in_zone_old = []
-        # Цикл совершения действий за один ход
-        for i in range (5):
-            logging.info(f"Связка атака+подшаг № {i+1}!")
-
-            player_x, player_y = get_player_coords(REGION)
-            if player_x is None:
-                logging.warning("Персонаж не обнаружен на поле боя!")
-                focus_game_window()
-                time.sleep(0.1)
-                logging.info("Завершаем ход (D).")
-                pydirectinput.press(KEY_D)
-                return
-
-            # in_zone, out_zone, nearest_outside = get_all_enemies_around_player(
-                # player_x, player_y,
-                # attack_zone_width,
-                # attack_zone_height
-            # )
-            # Определяем монстров около игрока 
-            in_zone, out_zone, nearest_outside = separate_enemies_by_rectangle(
-                player_x, player_y,
-                enemy_coords,
-                attack_zone_width,
-                attack_zone_height
-            )
-            # Проверяем количество ОД для проведения атаки
-            ap = get_action_points()
-            if (ap is not None) and ap < MIN_ACTION_POINT:
-                logging.warning("Недостаточно ОД для проведения атаки!")
-                break
-            else:
-                logging.info("Можно атаковать!")
-
-            if in_zone is not None:
-                # in_zone = list(set(in_zone) - set(in_zone_old))
-
-                # Атакуем ближних
-                attack_enemies(in_zone)
-                
-                #### Тут нужно удалять из списка тех, кто был сейчас атакован
-                enemy_coords = list(set(enemy_coords) - set(in_zone))
-                
-                # in_zone_old = in_zone
-                # del in_zone
-
-            # Проверяем количество ОД для прохода к противнику
-            ap = get_action_points()
-            if (ap is not None) and ap < LAST_PLAYER_STEP:
-                logging.warning("Недостаточно ОД для прохода к противнику!")
-                # центрируем камеру
-                pydirectinput.press(KEY_SPACE)
-
-                # # Перезарядка оружия
-                # pydirectinput.press(KEY_RELOAD_W)
-                # time.sleep(0.1)
-                break
-            else:
-                logging.info("Можно идти к противнику!")
-
-            # Идём к самому близкому дальнему
-            if nearest_outside is not None:
-                go_to_enemy_ext(player_x, player_y,
-                                nearest_outside[0] + 5, nearest_outside[1] + 5)
-            else:
-                logging.warning("За зоной атаки противников не найдено, идти некуда!")
-                break
-
-            # Проверяем количество ОД для проведения атаки
-            ap = get_action_points()
-            if (ap is not None) and ap < MIN_ACTION_POINT:
-                logging.warning("Недостаточно ОД для проведения атаки!")
-                break
-            else:
-                logging.info("Пробуем очередную связку атака+подшаг!")
-    else:
-        logging.info("Крыс не обнаружено в зоне!")    
-
-    #####################################   
-    # # Ищем крыс
-    # enemies = find_all_rat_enemies_in_region(REGION, RAT_TEMPLATES, threshold=0.95)
-    # if not enemies:
-        # logging.info("Крыс не обнаружено в зоне!")
-    # else:
-        # logging.info(f"Найдено {len(enemies)} совпадений (крыс).")
-        # enemy_coords = [(ex, ey) for (ex, ey, _, _) in enemies]
-
-        # in_zone, out_zone, nearest_outside = separate_enemies_by_rectangle(
-            # player_x, player_y,
-            # enemy_coords,
-            # attack_zone_width,
-            # attack_zone_height
-        # )
-
-        # logging.info(f"Противники в зоне: {in_zone}")
-        # logging.info(f"Противники вне зоны: {out_zone}")
-        # logging.info(f"Ближайший (вне зоны): {nearest_outside}")
-
-        # # Атакуем ближних
-        # attack_enemies(in_zone)
-
-        # # Идём к самому близкому дальнему
-        # if nearest_outside is not None:
-            # go_to_enemy_ext(player_x, player_y,
-                            # nearest_outside[0] + 5, nearest_outside[1] + 5)
-        # else:
-            # logging.info("Вне зоны атаки противников нет.")
-        
-        # # 2) Пробуем получить очки действия
-        # ap = get_action_points()
-        # if ap > 3:
-            # player_x, player_y = get_player_coords(REGION)
-
-            # if player_x is not None:
-                # # Ищем крыс
-                # enemies = find_all_rat_enemies_in_region(REGION, RAT_TEMPLATES, threshold=0.95)
-                # if not enemies:
-                    # logging.info("Крыс не обнаружено в зоне!")
-                # else:
-                    # logging.info(f"Найдено {len(enemies)} совпадений (крыс).")
-                    # enemy_coords = [(ex, ey) for (ex, ey, _, _) in enemies]
-
-                    # in_zone, out_zone, nearest_outside = separate_enemies_by_rectangle(
-                        # player_x, player_y,
-                        # enemy_coords,
-                        # attack_zone_width,
-                        # attack_zone_height
-                    # )
-
-                    # logging.info(f"Противники в зоне: {in_zone}")
-                    # logging.info(f"Противники вне зоны: {out_zone}")
-                    # logging.info(f"Ближайший (вне зоны): {nearest_outside}")
-
-                    # # Атакуем ближних
-                    # attack_enemies(in_zone)          
-    
-    focus_game_window()
-    time.sleep(0.1)
-
-    # Перезарядка оружия
-    pydirectinput.press(KEY_RELOAD_W)
-    time.sleep(0.1)
-
-    logging.info("Завершаем ход в штатном режиме (D).")
-    pydirectinput.press(KEY_D)
 
 def perform_battle_turn(attack_zone_width=330, attack_zone_height=320):
     """
@@ -1167,7 +950,7 @@ def perform_battle_turn(attack_zone_width=330, attack_zone_height=320):
       4) Атакуем ближних, двигаемся к ближайшему дальнему (если есть).
       5) Нажимаем D, завершаем ход.
     """
-    global FIRST_TURN, RUNNING, PAUSE
+    global FIRST_TURN, RUNNING, PAUSE, PRE_PLAYER_X, PRE_PLAYER_Y
 
     focus_game_window()
     pydirectinput.keyDown(KEY_ENTER)
@@ -1188,6 +971,7 @@ def perform_battle_turn(attack_zone_width=330, attack_zone_height=320):
     # pydirectinput.press(KEY_RELOAD_W)
     # time.sleep(0.1)
 
+    # Если это первый ход в бою, то выкидываем 4 секцию рюкзака
     if FIRST_TURN:
         FIRST_TURN = False
         # Выкинуть 4 секцию рюкзака
@@ -1198,7 +982,6 @@ def perform_battle_turn(attack_zone_width=330, attack_zone_height=320):
     """Новый метод с циклом"""
     
     # 1. Ищем всех врагов до цикла
-    
     enemies = find_all_rat_enemies_in_region(REGION, RAT_TEMPLATES, threshold=0.93)
         
     if enemies:
@@ -1207,16 +990,21 @@ def perform_battle_turn(attack_zone_width=330, attack_zone_height=320):
         # Пересобираем массив, оставляя только координаты (x, y)
         enemy_coords = [(ex, ey) for (ex, ey, _, _) in enemies]
 
-        # Цикл совершения действий (шагов) за один ход
+        # Цикл совершения шагов (действий) за текущий ход
         for i in range (5):
-            if not RUNNING:
-                return
+        
+            check_global_hotkeys()
+            # ### Проверка хоткеев
+            # # Если был нажат хоткей немедленного останова скрипта
+            # if not RUNNING:
+                # return
 
-            if PAUSE:
-                PAUSE = False
-                logging.warning(f"Начало паузы...")
-                time.sleep(PAUSE_DELAY)
-                logging.warning(f"Пауза окончена!")
+            # # Если был нажат хоткей паузы
+            # if PAUSE:
+                # PAUSE = False
+                # logging.warning(f"НАЧАЛО ПАУЗЫ...")
+                # time.sleep(PAUSE_DELAY)
+                # logging.warning(f"ПАУЗА ОКОНЧЕНА!")
 
             logging.info(f"Связка атаки и прохода к противнику № {i+1}!")
 
@@ -1228,23 +1016,39 @@ def perform_battle_turn(attack_zone_width=330, attack_zone_height=320):
             else:
                 logging.info(f"ОД хватает ({ap}) для дальнейших действий.")
 
-            # Определяем координаты игрока
+            # 1. Определяем координаты игрока
             player_x, player_y = get_player_coords(REGION)
             if player_x is None:
                 logging.warning("Персонаж не обнаружен на поле боя!")
                 focus_game_window()
                 time.sleep(0.1)
+
+                # центрируем камеру
+                pydirectinput.press(KEY_SPACE)
+
                 logging.info("Завершаем ход (D).")
                 pydirectinput.press(KEY_D)
                 return
 
-            # Определяем монстров в заданной зоне около игрока 
+            # Если координаты не изменились с прошлого хода, то персонаж застрял
+            if (player_x == PRE_PLAYER_X) and (player_y == PRE_PLAYER_Y):
+                logging.warning("Походу персонаж застрял :(")
+                winsound.PlaySound("trouble.wav", winsound.SND_FILENAME)
+            else:
+                PRE_PLAYER_X = player_x
+                PRE_PLAYER_Y = player_y
+
+            # 2. Определяем монстров в заданной зоне около игрока
+            
+            # А. Ищем в прямоугольной области
             # in_zone, out_zone, nearest_outside = separate_enemies_by_rectangle(
                 # player_x, player_y,
                 # enemy_coords,
                 # attack_zone_width,
                 # attack_zone_height
             # )
+            
+            # Б. Ищем в шестиугольной области
             in_zone, out_zone, nearest_outside = separate_enemies_by_hex(
                 player_x, player_y,
                 enemy_coords,
@@ -1252,26 +1056,36 @@ def perform_battle_turn(attack_zone_width=330, attack_zone_height=320):
                 attack_zone_height,
                 extra_width=150
             )
-            if not RUNNING:
-                return
+            
+            check_global_hotkeys()
+            # ### Проверка хоткеев
+            # # Если был нажат хоткей немедленного останова скрипта
+            # if not RUNNING:
+                # return
 
-            if PAUSE:
-                PAUSE = False
-                logging.warning(f"Начало паузы...")
-                time.sleep(PAUSE_DELAY)
-                logging.warning(f"Пауза окончена!")
+            # # Если был нажат хоткей паузы
+            # if PAUSE:
+                # PAUSE = False
+                # logging.warning(f"НАЧАЛО ПАУЗЫ...")
+                # time.sleep(PAUSE_DELAY)
+                # logging.warning(f"ПАУЗА ОКОНЧЕНА!")
 
-            # Атакуем близлежащих противников (если они найдены)
+            # 3. Атакуем близлежащих противников (если они найдены)
             if in_zone is not None:
                 attack_enemies(in_zone)
                 
-                # Удаляем из массива тех противников, кто был атакован
+                # Удаляем из массива тех противников, кто был только что атакован
                 enemy_coords = list(set(enemy_coords) - set(in_zone))
 
+            # Перезарядка оружия
+            pydirectinput.press(KEY_RELOAD_W)
+            time.sleep(0.1)
+                
             # Проверяем количество ОД для прохода к противнику
             ap = get_action_points()
             if (ap is not None) and ap < LAST_PLAYER_STEP:
                 logging.warning("Недостаточно ОД для прохода к противнику!")
+
                 # центрируем камеру
                 pydirectinput.press(KEY_SPACE)
 
@@ -1282,25 +1096,28 @@ def perform_battle_turn(attack_zone_width=330, attack_zone_height=320):
             else:
                 logging.info(f"ОД хватает ({ap}), чтобы идти к противнику!")
 
-            # Идём к самому близкому за зоной атаки
-            if not RUNNING:
-                return
+            check_global_hotkeys()
+            # ### Проверка хоткеев
+            # # Если был нажат хоткей немедленного останова скрипта
+            # if not RUNNING: 
+                # return
 
-            if PAUSE:
-                PAUSE = False
-                logging.warning(f"Начало паузы...")
-                time.sleep(PAUSE_DELAY)
-                logging.warning(f"Пауза окончена!")
+            # # Если был нажат хоткей паузы
+            # if PAUSE:
+                # PAUSE = False
+                # logging.warning(f"НАЧАЛО ПАУЗЫ...")
+                # time.sleep(PAUSE_DELAY)
+                # logging.warning(f"ПАУЗА ОКОНЧЕНА!")
 
-            # Добавочная логика:
-            # Пробуем сделать шаг,
-                # если изменилась координата, то ОК,
-                # если координата не изменилась, но ушли ОД, значит отменить шаг
+            # 4. Идём к самому близкому противнику за зоной атаки
             if nearest_outside is not None:
                 go_to_enemy_ext(player_x, player_y,
                                 nearest_outside[0] + 5, nearest_outside[1] + 5)
             else:
                 logging.warning("За зоной атаки противников не найдено, идти некуда!")
+
+                # центрируем камеру
+                pydirectinput.press(KEY_SPACE)
                 break
     else:
         logging.info("Крыс не обнаружено в зоне!")
@@ -1312,14 +1129,13 @@ def perform_battle_turn(attack_zone_width=330, attack_zone_height=320):
         pydirectinput.press("home")
         pydirectinput.press("pageup")
         pydirectinput.press("pagedown")
-        
 
     focus_game_window()
     time.sleep(0.1)
 
-    # Перезарядка оружия
-    pydirectinput.press(KEY_RELOAD_W)
-    time.sleep(0.1)
+    # # Перезарядка оружия
+    # pydirectinput.press(KEY_RELOAD_W)
+    # time.sleep(0.1)
 
     logging.info("Завершаем ход в штатном режиме (D).")
     pydirectinput.press(KEY_D)
@@ -1380,10 +1196,12 @@ def process_battle():
             else:
                 if not RUNNING:
                     return
+                # Ищем красный кружок врага на миникарте
                 if is_color_present_in_region():
                     RUNNING = False
                     winsound.PlaySound("alert_enemy_sound.wav", winsound.SND_FILENAME)
                     return
+                # Совершаем ход в бою (состоит из нескольких шагов)
                 perform_battle_turn()
         time.sleep(0.5)
 
